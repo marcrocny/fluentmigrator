@@ -115,7 +115,7 @@ namespace FluentMigrator.Runner
             var maintenanceMigrations = MaintenanceLoader.LoadMaintenance(stage);
             foreach (var maintenanceMigration in maintenanceMigrations)
             {
-                ApplyMigrationUp(maintenanceMigration, useAutomaticTransactionManagement && maintenanceMigration.TransactionBehavior == TransactionBehavior.Default);
+                ExecuteMigrationUp(maintenanceMigration, useAutomaticTransactionManagement && maintenanceMigration.TransactionBehavior == TransactionBehavior.Default);
             }
         }
 
@@ -147,7 +147,7 @@ namespace FluentMigrator.Runner
                     foreach (var migrationInfo in migrationInfos)
                     {
                         ApplyMaintenance(MigrationStage.BeforeEach, useAutomaticTransactionManagement);
-                        ApplyMigrationUp(migrationInfo, useAutomaticTransactionManagement && migrationInfo.TransactionBehavior == TransactionBehavior.Default);
+                        ExecuteMigrationUp(migrationInfo, useAutomaticTransactionManagement && migrationInfo.TransactionBehavior == TransactionBehavior.Default);
                         ApplyMaintenance(MigrationStage.AfterEach, useAutomaticTransactionManagement);
                     }
 
@@ -251,6 +251,14 @@ namespace FluentMigrator.Runner
         {
             if (migrationInfo == null) throw new ArgumentNullException("migrationInfo");
 
+            if (!migrationInfo.IsAttributed() || !VersionLoader.VersionInfo.HasAppliedMigration(migrationInfo.Version))
+            {
+                ExecuteMigrationUp(migrationInfo, useTransaction);
+            }
+        }
+
+        private void ExecuteMigrationUp(IMigrationInfo migrationInfo, bool useTransaction)
+        {
             if (!_alreadyOutputPreviewOnlyModeWarning && Processor.Options.PreviewOnly)
             {
                 _announcer.Heading("PREVIEW-ONLY MODE");
@@ -420,7 +428,7 @@ namespace FluentMigrator.Runner
         {
             var migrationInfoAdapter = new NonAttributedMigrationToMigrationInfoAdapter(migration);
 
-            ApplyMigrationUp(migrationInfoAdapter, true);
+            ExecuteMigrationUp(migrationInfoAdapter, true);
         }
 
         private void ExecuteMigration(IMigration migration, Action<IMigration, IMigrationContext> getExpressions)
